@@ -15,5 +15,5 @@
 
 int bc_fsize(char * filename);
 FILE * bc_fopen(char * filename, char * mode);
-void bc_unpackfft(int fft_size, fftw_complex * fft_output, uint32_t * magnitudes);
+void bc_unpackfft(int fft_size, fftw_complex * fft_output, unsigned int * magnitudes);
 #endif

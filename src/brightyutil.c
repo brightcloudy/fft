@@ -24,7 +24,7 @@ FILE * bc_fopen(char * filename, char * mode) {
   return inputFile;
 }
 
-void bc_unpackfft(int fft_size, fftw_complex * fft_output, uint32_t * magnitudes) {
+void bc_unpackfft(int fft_size, fftw_complex * fft_output, unsigned int * magnitudes) {
   int i;
   for (i = 0; i < fft_size; i++) {
     magnitudes[i] = sqrt(pow(fft_output[i][0], 2) + pow(fft_output[i][1], 2));

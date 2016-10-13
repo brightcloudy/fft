@@ -13,38 +13,57 @@ int main(int argc, char * argv[]) {
   inputFile = bc_fopen(argv[1], "rb");
 
   int i;
-  int fft_size = FFT_SIZE;
+  
+  // window for audio samples from file raw
   uint32_t * fft_window;
-  fft_window = (uint32_t *) malloc(fft_size * sizeof(uint32_t));
+  fft_window = (uint32_t *) malloc(FFT_SIZE * sizeof(uint32_t));
+  // scaled for fft maths to be within -1.0, 1.0
   double * scaled_fft_window;
-  scaled_fft_window = (double *) malloc(fft_size * sizeof(double));
-  fread(fft_window, sizeof(uint32_t), (size_t) fft_size, inputFile);
-  for (i = 0; i < fft_size; i++) {
-    scaled_fft_window[i] = (((double) fft_window[i]) / ((double) UINT32_MAX));
-  }
-  fftw_plan plan;
+  scaled_fft_window = (double *) malloc(FFT_SIZE * sizeof(double));
+  // need malloc for complex output of DFT
   fftw_complex * complexOut;
-  complexOut = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * fft_size);
+  complexOut = (fftw_complex *) fftw_malloc(sizeof(fftw_complex) * FFT_SIZE);
+  // and also for plain jane magnitudes
+  unsigned int * mag_out;
+  mag_out = (unsigned int *) malloc(FFT_SIZE * sizeof(unsigned int));
 
-  plan = fftw_plan_dft_r2c_1d(fft_size, scaled_fft_window, complexOut, FFTW_ESTIMATE);
+  // fftw plan is made once and executed many
+  fftw_plan plan;
+  plan = fftw_plan_dft_r2c_1d(FFT_SIZE, scaled_fft_window, complexOut, FFTW_ESTIMATE);
 
-  fftw_execute(plan);
+  int frame_count;
+  frame_count = ((inputSize / sizeof(uint32_t)) / FFT_SIZE);
 
+  int frame_i;
 
-  uint32_t * mag_out;
-  mag_out = (uint32_t *) malloc(fft_size * sizeof(uint32_t));
-  bc_unpackfft(fft_size, complexOut, mag_out);
+  for (frame_i = 0; frame_i < frame_count; frame_i++) {
+    fread(fft_window, sizeof(uint32_t), (size_t) FFT_SIZE, inputFile);
 
-  double binfreq;
-  double binfreq_increment = ((double) SAMPLE_RATE) / ((double) FFT_SIZE);
+    for (i = 0; i < FFT_SIZE; i++) {
+      scaled_fft_window[i] = (((double) fft_window[i]) / ((double) UINT32_MAX));
+    }
 
-  binfreq = 0.0;
+    fftw_execute(plan);
 
-  for (i = 0; i < fft_size; i++) {
-    printf("%2.2f, %d\n", binfreq, mag_out[i]);
-    binfreq += binfreq_increment;
+    bc_unpackfft(FFT_SIZE, complexOut, mag_out);
+
+    double binfreq;
+    double binfreq_increment = ((double) FMAX) / ((double) FFT_NUMBINS);
+
+    binfreq = 0.0;
+
+    double loudest_bin;
+    unsigned int max_mag_seen = 0;
+
+    for (i = 1; i < FFT_SIZE; i++) {
+      if (mag_out[i] >= max_mag_seen) {
+        loudest_bin = binfreq;
+        max_mag_seen = mag_out[i];
+      }
+      binfreq += binfreq_increment;
+    }
+    printf("%f is loudest\n", loudest_bin);
   }
-
   fclose(inputFile);
   fftw_destroy_plan(plan);
   fftw_free(complexOut);
