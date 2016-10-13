@@ -1,6 +1,7 @@
 #include "brightyutil.h"
 #include "brightyfft.h"
 #include <fftw3.h>
+#include <wand/MagickWand.h>
 
 int main(int argc, char * argv[]) {
   if (argc != 2) {
@@ -13,6 +14,10 @@ int main(int argc, char * argv[]) {
   inputFile = bc_fopen(argv[1], "rb");
 
   int i;
+  MagickWandGenesis();
+  MagickWand * mw;
+  mw = NewMagickWand();
+  MagickWandTerminus();
   
   // window for audio samples from file raw
   uint32_t * fft_window;
